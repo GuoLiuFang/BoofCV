@@ -25,7 +25,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Describes a known multi camera system with intrinsics and extrinsics. extrinsics are relative to a common
+ * Describes a known multi camera system with intrinsics and extrinsics. Extrinsics are relative to a common
  * reference frame known as sensor frame.
  *
  * @author Peter Abeles
@@ -33,7 +33,7 @@ import java.util.List;
 public class MultiCameraSystem {
 	public final List<Camera> cameras = new ArrayList<>();
 
-	public void addCamera(Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
+	public void addCamera( Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
 		cameras.add(new Camera(cameraToSensor, intrinsics));
 	}
 

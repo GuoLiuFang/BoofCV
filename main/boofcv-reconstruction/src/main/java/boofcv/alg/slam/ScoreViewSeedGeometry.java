@@ -19,14 +19,13 @@
 package boofcv.alg.slam;
 
 /**
- * Batch Simultaneous Location and Mapping (SLAM) system which assumed a known multi camera system is viewing the world.
- * A feature based approach is used were first salient image features are found then matched to each other using
- * descriptors.
- *
- * @author Peter Abeles
+ * Scores how good each view would be as a seed to initialize the coordinate system. View pairs it known extrinsics
+ * are given preference over pairs which are unknown.
  */
-public class BatchSlamMultiCameras {
-	public void initialize( MultiCameraSystem sensor ) {
+public class ScoreViewSeedGeometry {
+	public void process() {
+		// TODO score pairwise 3D information. take in account known extrinsics vs unknown extrinsics
 
+		//
 	}
 }
