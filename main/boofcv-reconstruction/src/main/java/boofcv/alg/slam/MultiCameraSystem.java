@@ -21,8 +21,7 @@ package boofcv.alg.slam;
 import boofcv.alg.distort.LensDistortionWideFOV;
 import georegression.struct.se.Se3_F64;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 /**
  * Describes a known multi camera system with intrinsics and extrinsics. Extrinsics are relative to a common
@@ -32,16 +31,25 @@ import java.util.List;
  */
 public class MultiCameraSystem {
 	public final List<Camera> cameras = new ArrayList<>();
+	public final Map<String, Camera> nameToCameras = new HashMap<>();
 
-	public void addCamera( Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
-		cameras.add(new Camera(cameraToSensor, intrinsics));
+	public void addCamera( String name, Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
+		var cam = new Camera(name, cameraToSensor, intrinsics);
+		cameras.add(cam);
+		nameToCameras.put(name, cam);
+	}
+
+	public Camera lookupCamera( String cameraID ) {
+		return Objects.requireNonNull(nameToCameras.get(cameraID));
 	}
 
 	public static class Camera {
+		public final String name;
 		public final LensDistortionWideFOV intrinsics;
 		public final Se3_F64 cameraToSensor = new Se3_F64();
 
-		public Camera( Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
+		public Camera( String name, Se3_F64 cameraToSensor, LensDistortionWideFOV intrinsics ) {
+			this.name = name;
 			this.cameraToSensor.setTo(cameraToSensor);
 			this.intrinsics = intrinsics;
 		}
