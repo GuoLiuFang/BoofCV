@@ -37,6 +37,8 @@ import java.util.Map;
 /**
  * Scores how good each view would be as a seed to initialize the coordinate system. View pairs it known extrinsics
  * are given preference over pairs which are unknown.
+ *
+ * @author Peter Abeles
  */
 public class ScoreViewSeedGeometry {
 

@@ -33,6 +33,7 @@ import java.util.Set;
 /**
  * Scores the geometric information between two views when the extrinsics and intrinsics are known.
  *
+ * @author Peter Abeles
  */
 public class EpipolarScoreKnownExtrinsics implements EpipolarCalibratedScore3D {
 
