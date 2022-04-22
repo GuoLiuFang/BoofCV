@@ -33,6 +33,7 @@ import boofcv.abst.geo.trifocal.WrapTrifocalLinearPoint7;
 import boofcv.alg.geo.ModelObservationResidualN;
 import boofcv.alg.geo.bundle.*;
 import boofcv.alg.geo.f.DistanceEpipolarConstraint;
+import boofcv.alg.geo.f.DistanceEpipolarConstraintPointing;
 import boofcv.alg.geo.h.HomographyDirectLinearTransform;
 import boofcv.alg.geo.h.HomographyResidualSampson;
 import boofcv.alg.geo.h.HomographyResidualTransfer;
@@ -254,11 +255,24 @@ public class FactoryMultiView {
 		};
 	}
 
+	/**
+	 * Estimates an essential matrix given observations as normalized image coordinates. All N solutions are returned
+	 */
 	public static EstimateNofEpipolar essential_N( EnumEssential which ) {
 		return switch (which) {
 			case LINEAR_8 -> new Estimate1toNofEpipolar(new WrapFundamentalLinear8(false));
 			case LINEAR_7 -> new WrapFundamentalLinear7(false);
 			case NISTER_5 -> new WrapEssentialNister5();
+		};
+	}
+
+	/**
+	 * Estimates an essential matrix given observations as pointing vectors
+	 */
+	public static EstimateNofEpipolarPointing essentialPointing_N( EnumEssential which ) {
+		return switch (which) {
+			case NISTER_5 -> new WrapEssentialNister5Pointing();
+			default -> throw new IllegalArgumentException("Unsupported algorithm. Update the code? " + which);
 		};
 	}
 
@@ -316,9 +330,23 @@ public class FactoryMultiView {
 			throw new IllegalArgumentException("numRemoveAmbiguity must be greater than zero");
 
 		EstimateNofEpipolar alg = essential_N(which);
-		DistanceEpipolarConstraint distance = new DistanceEpipolarConstraint();
+		var distance = new DistanceEpipolarConstraint();
 
 		return new EstimateNto1ofEpipolar(alg, distance, numRemoveAmbiguity);
+	}
+
+	public static EstimateNto1ofEpipolarPointing essentialPointing_1( EnumEssential which, int numRemoveAmbiguity ) {
+//		if (which == EnumEssential.LINEAR_8) {
+//			return new WrapFundamentalLinear8(false);
+//		}
+
+		if (numRemoveAmbiguity <= 0)
+			throw new IllegalArgumentException("numRemoveAmbiguity must be greater than zero");
+
+		EstimateNofEpipolarPointing alg = essentialPointing_N(which);
+		var distance = new DistanceEpipolarConstraintPointing();
+
+		return new EstimateNto1ofEpipolarPointing(alg, distance, numRemoveAmbiguity);
 	}
 
 	/**
