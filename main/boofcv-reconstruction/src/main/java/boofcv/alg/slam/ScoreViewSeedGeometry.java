@@ -18,16 +18,21 @@
 
 package boofcv.alg.slam;
 
+import boofcv.alg.geo.robust.RansacCalibrated2;
+import boofcv.alg.structure.LookUpCameraInfo;
 import boofcv.alg.structure.LookUpSimilarImages;
 import boofcv.alg.structure.PairwiseImageGraph;
+import boofcv.struct.ConfigLength;
 import boofcv.struct.distort.Point2Transform3_F64;
 import boofcv.struct.feature.AssociatedIndex;
+import boofcv.struct.geo.AssociatedPair3D;
 import georegression.struct.point.Point2D_F64;
 import georegression.struct.point.Point3D_F64;
 import georegression.struct.se.Se3_F64;
+import lombok.Getter;
+import lombok.Setter;
 import org.ddogleg.struct.DogArray;
 import org.ddogleg.struct.DogArray_I32;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -68,7 +73,17 @@ public class ScoreViewSeedGeometry {
 	// Scores relationship between views when extrinsics is not known
 	EpipolarCalibratedScore3D scoreNotKnown;
 
-	public void process( LookUpSimilarImages similarImages ) {
+	/** Specifies max reproejction error for inlier. If relative, then width + height */
+	@Getter public ConfigLength maxReprojectionError = ConfigLength.relative(0.006, 2);
+
+	/** Number of RANSAC iterations needed when estimating the baseline */
+	@Getter @Setter public int numberOfIterations = 500;
+
+	public RansacCalibrated2<Se3_F64, AssociatedPair3D> robustBaseline;
+
+	public DogArray<AssociatedPair3D> associations = new DogArray<>(AssociatedPair3D::new);
+
+	public void process( LookUpSimilarImages similarImages, LookUpCameraInfo lookUpCameraInfo ) {
 		pairwise.reset();
 
 		List<String> allViews = similarImages.getImageIDs();
@@ -76,12 +91,12 @@ public class ScoreViewSeedGeometry {
 		// Convert pixel observations to pointing vector for all views, plus initialize views in pairwise graph
 		for (int i = 0; i < allViews.size(); i++) {
 			pairwise.createNode(allViews.get(i));
-			computePointingVectors(allViews.get(i), similarImages);
+			computePointingVectors(allViews.get(i), similarImages, lookUpCameraInfo);
 		}
 
 		// Construct pairwise graph and score how informative relationships are between the views
 		for (int i = 0; i < allViews.size(); i++) {
-			scoreConnectedViews(allViews.get(i), similarImages);
+			scoreConnectedViews(allViews.get(i), similarImages, lookUpCameraInfo);
 		}
 
 		// TODO score each view for being a seed based on its best neighbors
@@ -90,7 +105,7 @@ public class ScoreViewSeedGeometry {
 	/**
 	 * Loads pixels observations for a view then computing pointing vectors for each observation and saves the result
 	 */
-	protected void computePointingVectors( String viewId, LookUpSimilarImages similarImages ) {
+	protected void computePointingVectors( String viewId, LookUpSimilarImages similarImages, LookUpCameraInfo lookUpCameraInfo ) {
 		// Load pixel coordinates of observations
 		similarImages.lookupPixelFeats(viewId, pixels);
 
@@ -109,14 +124,15 @@ public class ScoreViewSeedGeometry {
 		}
 	}
 
-	protected void scoreConnectedViews( String viewA, LookUpSimilarImages similarImages ) {
+	protected void scoreConnectedViews( String viewA, LookUpSimilarImages similarImages, LookUpCameraInfo lookUpCameraInfo ) {
 		PairwiseImageGraph.View pa = pairwise.createNode(viewA);
 		ViewObservations obsA = viewToInfo.get(viewA);
+
 
 		// To avoid considering the same pair twice, filter out views with a higher index
 		similarImages.findSimilar(viewA, ( v ) -> obsA.index > viewToInfo.get(v).index, foundSimilar);
 
-		Se3_F64 workExtrinsics = new Se3_F64();
+		Se3_F64 b_to_a = new Se3_F64();
 
 		for (int i = 0; i < foundSimilar.size(); i++) {
 			String viewB = foundSimilar.get(i);
@@ -130,11 +146,13 @@ public class ScoreViewSeedGeometry {
 
 			// Compute the score differently depending on if the extrinsic relationship is known
 			EpipolarCalibratedScore3D scorer;
-			@Nullable Se3_F64 b_to_a = null;
 			if (checkSynchronized.isSynchronized(viewA, viewB)) {
-				b_to_a = sensors.computeSrcToDst(viewB, viewA, workExtrinsics);
+				sensors.computeSrcToDst(viewB, viewA, b_to_a);
 				scorer = scoreKnown;
 			} else {
+//				if (!estimateBaseline(b_to_a)) {
+//					continue;
+//				}
 				scorer = scoreNotKnown;
 			}
 
@@ -144,6 +162,42 @@ public class ScoreViewSeedGeometry {
 			motion.is3D = scorer.is3D();
 		}
 	}
+
+//	protected boolean estimateBaseline( Point3Transform2_F64 pointToPixelA, Point3Transform2_F64 pointToPixelB, Se3_F64 b_to_a) {
+//		double errorTolA = maxReprojectionError.compute((imageShapeA.width + imageShapeA.height)/2.0);
+//		double errorTolB = maxReprojectionError.compute((imageShapeB.width + imageShapeB.height)/2.0);
+//
+//		robustBaseline.setMaxIterations(numberOfIterations);
+//
+//		// NOTE: This uses a single tolerance for both images. Not ideal...
+//		// maybe get around this issue by computing error in fractional pixels?
+//		robustBaseline.setThresholdFit((errorTolA + errorTolB)/);
+//
+//		robustBaseline.setDistortion(0, pointToPixelA);
+//		robustBaseline.setDistortion(1, pointToPixelB);
+//
+//		// Convert observations to a format that the robust estimator understands
+//		associations.resetResize(pairs.size());
+//		for (int i = 0; i < pairs.size(); i++) {
+//			AssociatedPair3D ap = associations.get(i);
+//			AssociatedIndex ai = pairs.get(i);
+//			ap.p1.setTo(obsA.get(ai.src));
+//			ap.p2.setTo(obsA.get(ai.dst));
+//		}
+//
+//		if (!robustBaseline.process(associations.toList())) {
+//			// Something went horribly wrong. Probably bad data. In that event we don't want to use this
+//			// pair of views
+//			score3D = 0;
+//			is3D = false;
+//			return;
+//		}
+//
+//		Se3_F64 found_a_to_b = robustBaseline.getModelParameters();
+//
+//		// Now that the baseline is known, proceed as usual
+//		super.process(imageShapeA, imageShapeB, pointToPixelA, pointToPixelB, obsA, obsB, pairs, found_a_to_b, inliersIdx);
+//	}
 
 	public static class ViewObservations {
 		int index;
