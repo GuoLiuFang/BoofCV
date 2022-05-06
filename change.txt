@@ -31,7 +31,7 @@ Version : 0.41
 - Stereo Disparity: Fixed bug where invalid values got cast to a byte when image was float, causing artifacts.
 - Photogrammetry
  - Three-View Reconstruction: Does self calibration entirely inside of RANSAC
- - TODO Use this three-view code in PairwiseGraphUtils and remove projective part
+ - N-View reconstruction code now directory uses the 3-view class and skips a projective scene step
 - SLAM
   - TODO Monocular
   - TODO Stereo
