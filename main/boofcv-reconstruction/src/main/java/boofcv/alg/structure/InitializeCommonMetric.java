@@ -19,7 +19,6 @@
 package boofcv.alg.structure;
 
 import boofcv.abst.geo.bundle.SceneObservations;
-import boofcv.abst.geo.bundle.SceneStructureProjective;
 import boofcv.alg.geo.MetricCameras;
 import boofcv.alg.structure.PairwiseImageGraph.Motion;
 import boofcv.alg.structure.PairwiseImageGraph.View;
@@ -52,9 +51,8 @@ import static boofcv.misc.BoofMiscOps.checkTrue;
  *
  * TODO handle 2-view case
  * TODO specify camera shape individually. One camera is used for all views right now
- *
- * The output is contained in SBA structure. See {@link #getStructure()} and
- * {@link #getPairwiseGraphViewByStructureIndex(int)}
+ * TODO Need to provide some way to external adjust RANSAC parameters here
+ * TODO Handle planar scenes.
  *
  * @author Peter Abeles
  */
@@ -332,13 +330,6 @@ public class InitializeCommonMetric implements VerbosePrint {
 	}
 
 	/**
-	 * Returns the estimated scene structure
-	 */
-	public SceneStructureProjective getStructure() {
-		return utils.structurePr;
-	}
-
-	/**
 	 * Returns the {@link View} given the index of the view in structure
 	 */
 	public View getPairwiseGraphViewByStructureIndex( int index ) {
@@ -348,5 +339,6 @@ public class InitializeCommonMetric implements VerbosePrint {
 	@Override
 	public void setVerbose( @Nullable PrintStream out, @Nullable Set<String> configuration ) {
 		this.verbose = BoofMiscOps.addPrefix(this, out);
+		BoofMiscOps.verboseChildren(out, configuration, pixelToMetric3);
 	}
 }
