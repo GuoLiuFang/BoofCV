@@ -1,7 +1,7 @@
 .gradle
-.idea/libraries
+.idea/*
 *.class
-*.jar
+#*.jar
 **/*.iml
 **/*.ipr
 .DS_Store
